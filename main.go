@@ -52,9 +52,11 @@ func main() {
 }
 
 func BrudForce(Password []byte, EP *EncryptedProgram) []byte {
+	// массив с байтами которые представляют собой символы из  PrintableString
 	mass := []byte{65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57}
-	//4D 5A 90 00 03 00 04 00 00 00 00 00 FF FF 00 00
+
 	counter := 0
+	// полный перебор
 	for i := 0; i < len(mass); i++ {
 		Password[0] = mass[i]
 		counter++
@@ -67,6 +69,7 @@ func BrudForce(Password []byte, EP *EncryptedProgram) []byte {
 				for l := 0; l < len(mass); l++ {
 					Password[3] = mass[l]
 					counter++
+
 					prog, _ := Decrypt(f(XOR(Pad(Password, 16, 0), EP.Salt)), EP.Program, EP.Salt)
 					flag := CreatFile(prog)
 					fmt.Println(counter)
@@ -100,6 +103,7 @@ func BrudForce(Password []byte, EP *EncryptedProgram) []byte {
 	return Password
 }
 
+//Дополняю ключ до нужного размера
 func Pad(Password []byte, size int, b byte) []byte {
 	for i := len(Password); i < 16; i++ {
 		Password = append(Password, byte(0))
@@ -107,12 +111,15 @@ func Pad(Password []byte, size int, b byte) []byte {
 	return Password
 }
 
+//XOR двух масивов
 func XOR(pas []byte, salt []byte) (pass []byte) {
 	for i := 0; i < len(salt); i++ {
 		pass = append(pass, pas[i]^salt[i])
 	}
 	return pass
 }
+
+//Получаю пороль из хеш функции
 func f(password []byte) []byte {
 	h := sha256.Sum256(password)
 	var hash []byte
@@ -123,6 +130,7 @@ func f(password []byte) []byte {
 }
 
 func Decrypt(key []byte, securemess []byte, salt []byte) (decodedmess []byte, err error) {
+
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return
@@ -144,12 +152,14 @@ func Decrypt(key []byte, securemess []byte, salt []byte) (decodedmess []byte, er
 }
 
 func CreatFile(prog []byte) bool {
-	//4D   5A   90   00   03   00   04   00   00   00 00 00 FF FF 00 00
+	//4D 5A 90 00 03 00 04 00 00 00 00 00 FF FF 00 00
+	//проверяю первые 16 байтов
 	check := []byte{0x4D, 0x5A, 0x90, 0x00, 0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x00, 0x00}
 	if !bytes.Equal(check, prog[:16]) {
 		// fmt.Println(prog[:16])
 		return false
 	}
+	// создаю файл есть проверка прошла успешно
 	file, err := os.Create("Hello.exe")
 
 	if err != nil {
