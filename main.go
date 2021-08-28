@@ -72,7 +72,10 @@ func BrudForce(Password []byte, EP *EncryptedProgram) []byte {
 
 					prog, _ := Decrypt(f(XOR(Pad(Password, 16, 0), EP.Salt)), EP.Program, EP.Salt)
 					flag := CreatFile(prog)
-					fmt.Println(counter)
+					if counter%100000 == 0 {
+						fmt.Println(counter)
+					}
+					// fmt.Println(counter)
 					if flag {
 						fmt.Println("password", Password)
 						cmd := exec.Command(EP.Name, EP.Params...)
@@ -123,9 +126,11 @@ func XOR(pas []byte, salt []byte) (pass []byte) {
 func f(password []byte) []byte {
 	h := sha256.Sum256(password)
 	var hash []byte
+
 	for i := 0; i < len(h); i++ {
 		hash = append(hash, h[i])
 	}
+
 	return hash
 }
 
@@ -141,7 +146,7 @@ func Decrypt(key []byte, securemess []byte, salt []byte) (decodedmess []byte, er
 		return
 	}
 
-	// securemess = securemess[aes.BlockSize:]
+	securemess = securemess[:64]
 
 	stream := cipher.NewCFBDecrypter(block, salt)
 
