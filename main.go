@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/sha256"
@@ -9,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 )
 
 type EncryptedProgram struct {
@@ -23,6 +25,7 @@ type EncryptedProgram struct {
 func main() {
 
 	var EP EncryptedProgram
+
 	file, err := os.Open("Program0.enc")
 	if err != nil {
 		fmt.Println(err)
@@ -43,13 +46,14 @@ func main() {
 		fmt.Println(err)
 	}
 	password := []byte{65, 65, 65, 65}
+
 	BrudForce(password, &EP)
 
 }
 
 func BrudForce(Password []byte, EP *EncryptedProgram) []byte {
 	mass := []byte{65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57}
-
+	//4D 5A 90 00 03 00 04 00 00 00 00 00 FF FF 00 00
 	counter := 0
 	for i := 0; i < len(mass); i++ {
 		Password[0] = mass[i]
@@ -62,10 +66,33 @@ func BrudForce(Password []byte, EP *EncryptedProgram) []byte {
 				counter++
 				for l := 0; l < len(mass); l++ {
 					Password[3] = mass[l]
+					counter++
+					prog, _ := Decrypt(f(XOR(Pad(Password, 16, 0), EP.Salt)), EP.Program, EP.Salt)
+					flag := CreatFile(prog)
+					fmt.Println(counter)
+					if flag {
+						fmt.Println("password", Password)
+						cmd := exec.Command(EP.Name, EP.Params...)
+						stdout, err := cmd.Output()
 
-					fmt.Println(Decrypt(f(XOR(Pad(Password, 16, 0), EP.Salt)), EP.Program, EP.Salt))
-					os.Exit(0)
+						if err != nil {
+							fmt.Println("EXEC")
+							fmt.Println(err.Error())
+
+						}
+
+						fmt.Print(string(stdout))
+						// err = os.Remove("Hello.exe")
+						if err != nil {
+							fmt.Println("OS")
+							fmt.Println(err.Error())
+
+						}
+						os.Exit(0)
+					}
+
 				}
+
 			}
 		}
 	}
@@ -96,9 +123,7 @@ func f(password []byte) []byte {
 }
 
 func Decrypt(key []byte, securemess []byte, salt []byte) (decodedmess []byte, err error) {
-	fmt.Println(len(key))
 	block, err := aes.NewCipher(key)
-	fmt.Println(block.BlockSize())
 	if err != nil {
 		return
 	}
@@ -116,4 +141,25 @@ func Decrypt(key []byte, securemess []byte, salt []byte) (decodedmess []byte, er
 
 	decodedmess = securemess
 	return
+}
+
+func CreatFile(prog []byte) bool {
+	//4D   5A   90   00   03   00   04   00   00   00 00 00 FF FF 00 00
+	check := []byte{0x4D, 0x5A, 0x90, 0x00, 0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x00, 0x00}
+	if !bytes.Equal(check, prog[:16]) {
+		// fmt.Println(prog[:16])
+		return false
+	}
+	file, err := os.Create("Hello.exe")
+
+	if err != nil {
+		fmt.Println("Unable to create file:", err)
+
+	}
+	defer file.Close()
+	fmt.Println("ia tyt")
+	file.Write(prog)
+	fmt.Println("exe")
+
+	return true
 }
